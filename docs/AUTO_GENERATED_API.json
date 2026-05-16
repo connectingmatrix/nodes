@@ -1,0 +1,32 @@
+{
+  "package": "@connectingmatrix/nodes",
+  "summary": "Node CRUD/entity/UI package owning node dataloader and GraphQL extension.",
+  "contracts": [
+    "Nodes.getList/getObject/search/create/update/delete",
+    "Nodes.bindWithServer(endpoint)",
+    "GraphQL nodesList/nodesGet/nodesSearch/nodesCreate/nodesUpdate/nodesDelete"
+  ],
+  "exports": [
+    ".",
+    "./backend",
+    "./ui",
+    "./entity",
+    "./package.json",
+    "./package-structure",
+    "./launcher",
+    "./observability"
+  ],
+  "folderCounts": {
+    "src/ui": 6,
+    "src/backend": 49,
+    "src/entity": 3,
+    "migrations": 2,
+    "tests": 9
+  },
+  "launcher": "playground.mjs",
+  "observability": true,
+  "eighthPassGapClosure": {
+    "implemented": true,
+    "summary": "Eighth pass node creator contract"
+  }
+}
