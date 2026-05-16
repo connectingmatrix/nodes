@@ -4,7 +4,7 @@ Node CRUD/entity/UI package owning node dataloader and GraphQL extension.
 
 ## Ownership
 
-This package owns its `src/ui`, `src/backend`, `src/entity`, GraphQL bundle, migrations, health/status, launcher, and package contracts. It can be included in backend or UI without assuming a monorepo.
+This package owns its `src/client`, `src/backend`, `src/entity`, GraphQL bundle, migrations, health/status, launcher, and package contracts. It can be included in backend or UI without assuming a monorepo.
 
 ## Public contracts
 
@@ -65,7 +65,7 @@ GraphQL namespace and routes are returned by `createPackage()`. Routes include h
 
 ## Folder counts
 
-- `src/ui`: 6 files
+- `src/client`: 6 files
 - `src/backend`: 49 files
 - `src/entity`: 3 files
 - `migrations`: 2 files

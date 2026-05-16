@@ -22,9 +22,12 @@
     "node_modules",
     "vendor/**/*",
     "src/backend/modules/**/*",
-    "src/ui/dataloaders/**/*",
-    "src/ui/screens/**/*",
-    "src/ui/components/**/*",
-    "src/entity/entities/**/*"
+    "src/client/dataloaders/**/*",
+    "src/client/screens/**/*",
+    "src/client/components/**/*",
+    "src/entity/entities/**/*",
+    "src/client/designer/**/*",
+    "src/client/shell/**/*",
+    "src/playground-ui/**/*"
   ]
 }
