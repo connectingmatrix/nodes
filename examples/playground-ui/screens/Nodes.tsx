@@ -10,8 +10,8 @@ import { LoadingState } from '../components/LoadingState';
 import { SearchBar } from '../components/SearchBar';
 import { useToast } from '../components/Toast';
 import { useUiDataContext } from '../contexts/AuthSessionContext';
-import { deleteUserNode, listUserNodes, updateUserNode } from '@/dataloaders';
-import type { UserNodeRecord, WorkflowUserNodeInput } from '@/orm';
+import { deleteUserNode, listUserNodes, updateUserNode } from '@giga/dataloader/client/legacy/dataloaders';
+import type { UserNodeRecord, WorkflowUserNodeInput } from '@giga/dataloader/client/legacy/orm';
 
 const sourceCount = (node: UserNodeRecord): number => Object.keys(node.sourceFiles).length;
 const fieldCount = (node: UserNodeRecord): number => Object.keys(node.nodeSchema).length;

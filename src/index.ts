@@ -1,7 +1,7 @@
 import { GraphQLClient } from './client/graphql-client.js';
 import { InMemoryRepository, type BaseRecord } from './entity/repository.js';
 import { LocalEventBus, makeId, nowIso, type ListResult, type PackageHealth, type PackageModule, type PaginationOptions, type RequestContext } from './contracts.js';
-import { createStubLauncher } from './launcher.js';
+import { createPackageStatusPanel } from './services/package-status.service.js';
 import { PackageObservability } from './observability.js';
 
 export interface NodeSourceFile { path: string; content: string; }
@@ -167,7 +167,7 @@ export const Nodes = {
   downloadNodePackage(id: string, context: RequestContext = {}) { return Nodes.exportNodePackage(id, context); },
   async importDraggedNode(input: string | Uint8Array | NodePackageFile | Record<string, unknown>, context: RequestContext = {}) { return Nodes.importNodePackage(input, context); },
   async importNodePackage(input: string | Uint8Array | NodePackageFile | Record<string, unknown>, context: RequestContext = {}) { return Nodes.create(await decodeNodePackage(input), context); },
-  launcher: createStubLauncher,
+  launcher: createPackageStatusPanel,
   health(): PackageHealth { return { name: '@connectingmatrix/nodes', status: 'ok', checkedAt: nowIso(), details: { endpoint, count: repo.list({ root: true }).total, executions: executions.list({ root: true }).total, debugSessions: debugSessions.list({ root: true }).total, executorAdapter: Boolean(executorAdapter), nodeAgent: Boolean(nodeAgent), nodePackageProvider: fileModule ? '@connectingmatrix/file' : 'local-fallback', processMonitoring: Boolean(processMonitoring), ...PackageObservability.healthDetails() } }; },
 };
 
@@ -179,10 +179,10 @@ export const graphql = {
 };
 
 export function createPackage(): PackageModule {
-  return { name: '@connectingmatrix/nodes', version: '0.3.0', health: () => Nodes.health(), graphql, migrations: graphql.migrations, launcher: createStubLauncher, routes: [{ method: 'GET', path: '/nodes/health', handler: () => Nodes.health() }, { method: 'GET', path: '/nodes', handler: (request) => Nodes.getList({}, contextFromUnknown(request)) }, { method: 'POST', path: '/nodes/debug', handler: (request) => Nodes.debugWithAI((request as { body?: { sessionId?: string; nodeId?: string; message?: string }, context?: RequestContext }).body ? { ...(request as { body: { sessionId?: string; nodeId?: string; message?: string } }).body, message: (request as { body: { message?: string } }).body.message ?? 'debug node' } : { message: 'debug node' }, (request as { context?: RequestContext }).context ?? {}) }, { method: 'POST', path: '/nodes/package/import', handler: (request) => Nodes.importNodePackage((request as { body?: { content?: string } }).body?.content ?? '', (request as { context?: RequestContext }).context ?? {}) }], runtime: { Nodes, observability: PackageObservability } };
+  return { name: '@connectingmatrix/nodes', version: '0.3.0', health: () => Nodes.health(), graphql, migrations: graphql.migrations, launcher: createPackageStatusPanel, routes: [{ method: 'GET', path: '/nodes/health', handler: () => Nodes.health() }, { method: 'GET', path: '/nodes', handler: (request) => Nodes.getList({}, contextFromUnknown(request)) }, { method: 'POST', path: '/nodes/debug', handler: (request) => Nodes.debugWithAI((request as { body?: { sessionId?: string; nodeId?: string; message?: string }, context?: RequestContext }).body ? { ...(request as { body: { sessionId?: string; nodeId?: string; message?: string } }).body, message: (request as { body: { message?: string } }).body.message ?? 'debug node' } : { message: 'debug node' }, (request as { context?: RequestContext }).context ?? {}) }, { method: 'POST', path: '/nodes/package/import', handler: (request) => Nodes.importNodePackage((request as { body?: { content?: string } }).body?.content ?? '', (request as { context?: RequestContext }).context ?? {}) }], runtime: { Nodes, observability: PackageObservability } };
 }
 
 export * from './contracts.js';
 export * from './package-structure.js';
 export * from './observability.js';
-export * from './launcher.js';
+export * from './services/package-status.service.js';

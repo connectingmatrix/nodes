@@ -2,7 +2,7 @@ import { parseRecordValue, parseStringValue } from 'giga-ai-helper/workflow';
 import { isCurrentUserRootUser } from '@giga/shared/lib/helper';
 import { OrganisationEntity } from '@connectingmatrix/orm/repositories/entities';
 import { fetchChatSession } from '@connectingmatrix/chat/services/chat/auth/get-chat-session';
-import { WorkflowNodeStatusEnum, type WorkflowNodeHandler } from '@connectingmatrix/workflows/services/workflow/contracts/types';
+import { WorkflowNodeStatusEnum, type WorkflowNodeHandler } from '@connectingmatrix/workflow-driver/services/workflow/contracts/types';
 
 const values = (context: Parameters<WorkflowNodeHandler>[0]) => ({
   ...parseRecordValue(context.input),

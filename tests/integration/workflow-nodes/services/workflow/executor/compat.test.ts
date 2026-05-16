@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { WorkflowLogLevelEnum, WorkflowRunLogEvent } from '@connectingmatrix/workflows/services/workflow/contracts/types';
+import { WorkflowLogLevelEnum, WorkflowRunLogEvent } from '@connectingmatrix/workflow-driver/services/workflow/contracts/types';
 import { createCompatWorkflowLogger, resolveExecutionLogEvents } from '../../../../src/services/workflow/executor/runtime/compat';
 
 test('createCompatWorkflowLogger forwards events to target logger', () => {

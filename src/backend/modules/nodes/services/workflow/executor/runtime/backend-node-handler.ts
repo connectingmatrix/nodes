@@ -1,4 +1,4 @@
-import { getWorkflowExecutionRequestContext } from '@connectingmatrix/workflows/services/workflow/runtime/credential-host-context';
+import { getWorkflowExecutionRequestContext } from '@connectingmatrix/workflow-driver/services/workflow/runtime/credential-host-context';
 import { executeCurrentChatNode } from '@connectingmatrix/nodes/services/workflow/nodes/runtime/current-chat';
 import type { WorkflowNodeHandler } from '@workflow/executor';
 

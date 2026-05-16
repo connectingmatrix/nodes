@@ -1,0 +1,226 @@
+import { GraphQLClient } from './client/graphql-client.js';
+import { InMemoryRepository } from './entity/repository.js';
+import { LocalEventBus, makeId, nowIso } from './contracts.js';
+import { createPackageStatusPanel } from './services/package-status.service.js';
+import { PackageObservability } from './observability.js';
+const repo = new InMemoryRepository('nodes');
+const executions = new InMemoryRepository('node_execution');
+const debugSessions = new InMemoryRepository('node_debug_session');
+const debugEvents = new InMemoryRepository('node_debug_event');
+const client = new GraphQLClient();
+const bus = new LocalEventBus();
+let endpoint = '/graphql';
+let executorAdapter;
+let nodeAgent;
+let debugSink;
+let processMonitoring;
+let fileModule;
+let nodePackageProvider = 'memory';
+function processIdOf(row, fallback) { const value = row && typeof row === 'object' ? row : undefined; return value?.id ?? value?.processId ?? fallback; }
+function contextFromUnknown(args) { return (args && typeof args === 'object' && 'context' in args ? args.context : undefined) ?? {}; }
+function slugify(value) { return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'node'; }
+function normalizeInput(input) { const sourceFiles = input.sourceFiles ?? ((input.source ?? input.code) ? { 'index.ts': input.source ?? input.code ?? '' } : undefined); return { ...input, sourceFiles }; }
+function sourceFiles(node) { return node.sourceFiles ?? { 'index.ts': `export default async function ${slugify(node.name).replace(/-/g, '_')}(input: unknown) { return { ok: true, input }; }` }; }
+function nodeManifest(node) { return { format: 'connectingmatrix-node-package-v1', version: 1, exportedAt: nowIso(), node: { name: node.name, description: node.description, slug: node.slug ?? slugify(node.name), nodeSchema: node.nodeSchema ?? {}, sourceFiles: sourceFiles(node), metadata: node.metadata ?? {} } }; }
+async function encodeNodePackage(node) {
+    const manifest = nodeManifest(node);
+    const adapter = fileModule?.createNodePackageAdapter?.(nodePackageProvider);
+    const archiveAdapter = fileModule?.createSourceArchiveAdapter?.(nodePackageProvider);
+    let content;
+    if (adapter)
+        content = await adapter.createNodePackage(manifest);
+    else if (archiveAdapter)
+        content = await archiveAdapter.createArchive([{ path: 'node.json', content: JSON.stringify(manifest, null, 2) }, ...Object.entries(sourceFiles(node)).map(([path, content]) => ({ path: `src/${path}`, content }))]);
+    else
+        throw new Error('@connectingmatrix/file node package or source archive adapter is required');
+    return { fileName: `${String(manifest.node.slug ?? slugify(node.name))}.node`, extension: '.node', mimeType: 'application/x-connectingmatrix-node', content, manifest };
+}
+async function decodeNodePackage(input) {
+    let raw;
+    const adapter = fileModule?.createNodePackageAdapter?.(nodePackageProvider);
+    const archiveAdapter = fileModule?.createSourceArchiveAdapter?.(nodePackageProvider);
+    if (input instanceof Uint8Array) {
+        if (adapter)
+            raw = await adapter.extractNodePackage(input);
+        else if (archiveAdapter) {
+            const entries = await archiveAdapter.extractArchive(input);
+            const manifest = entries.find((entry) => entry.path === 'node.json' || entry.path.endsWith('/node.json'));
+            if (!manifest)
+                throw new Error('Invalid .node package: node.json not found');
+            raw = JSON.parse(manifest.content);
+        }
+        else
+            throw new Error('@connectingmatrix/file node package or source archive adapter is required');
+    }
+    else if (typeof input === 'string') {
+        const clean = input.replace(/^data:.*?;base64,/, '');
+        try {
+            raw = JSON.parse(Buffer.from(clean, 'base64').toString('utf8'));
+        }
+        catch {
+            raw = JSON.parse(input);
+        }
+    }
+    else if ('manifest' in input)
+        raw = input.manifest;
+    else
+        raw = input;
+    const node = raw.node ?? raw;
+    if (!node.name)
+        throw new Error('.node package is missing node.name');
+    return node;
+}
+async function logDebug(input, context) { const event = debugEvents.create(input, context); await debugSink?.(event, context); await PackageObservability.emit('info', 'node-debug-event', { processId: `node-debug:${event.sessionId}`, nodeId: event.nodeId, role: event.role }, context); return event; }
+const defaultNodeAgent = { async run(input, context) {
+        const lower = input.message.toLowerCase();
+        const actions = [];
+        let patch;
+        let execution;
+        let nodePackage;
+        if (!input.node || lower.includes('create')) {
+            const name = (input.message.match(/name:\s*([^,\n]+)/i)?.[1] ?? input.node?.name ?? (input.message.replace(/^(create|build)\s+/i, '').slice(0, 80) || 'Generated Node')).trim();
+            patch = { name, slug: slugify(name), description: `Generated by Node Creator AI: ${input.message}`, nodeSchema: { input: 'unknown', output: 'unknown' }, sourceFiles: { 'index.ts': 'export default async function run(input) { return { ok: true, input }; }' } };
+            actions.push('create-node');
+        }
+        if (lower.includes('validate') || lower.includes('debug'))
+            actions.push('validate-node');
+        if (lower.includes('execute') || lower.includes('run')) {
+            try {
+                execution = await input.execute({ source: 'node-ai' });
+                actions.push('execute-node');
+            }
+            catch {
+                actions.push('execute-node-pending');
+            }
+        }
+        if (lower.includes('download') || lower.includes('.node') || lower.includes('package')) {
+            if (input.node)
+                nodePackage = await encodeNodePackage(input.node);
+            actions.push('export-node-package');
+        }
+        return { output: [`Node AI ${input.mode}`, `Validation: ${input.validation?.valid ?? 'pending'}`, `Actions: ${actions.join(', ') || 'inspect'}`].join('\n'), actions, patch, execution, nodePackage };
+    } };
+export const Nodes = {
+    bindWithServer(url) { endpoint = url.replace(/\/$/, ''); client.bindWithServer(endpoint); return Nodes; },
+    bindLogger(logger) { PackageObservability.bind({ logger: logger }); return Nodes; },
+    bindSockets(sockets) { PackageObservability.bind({ sockets: sockets }); return Nodes; },
+    bindProcessMonitor(monitor) { processMonitoring = monitor; return Nodes; },
+    bindProcessMonitoring(monitor) { processMonitoring = monitor; return Nodes; },
+    useFileModule(api, provider = 'memory') { fileModule = api; nodePackageProvider = provider; return Nodes; },
+    setExecutorAdapter(adapter) { executorAdapter = adapter; return Nodes; },
+    bindNodeAgent(agent) { nodeAgent = agent; return Nodes; },
+    setAIAssistantAdapter(agent) { nodeAgent = agent; return Nodes; },
+    setNodeAgent(agent) { nodeAgent = agent; return Nodes; },
+    setDebugSink(sink) { debugSink = sink; return Nodes; },
+    create(input, context = {}) { const normalized = normalizeInput(input); return repo.create({ ...normalized, slug: normalized.slug ?? slugify(normalized.name), sourceFiles: normalized.sourceFiles ?? sourceFiles(normalized), nodeSchema: normalized.nodeSchema ?? {}, status: 'active' }, context); },
+    getObject(id, context = {}) { return repo.get(id, context); },
+    getList(pagination = {}, context = {}) { return repo.list(context, pagination); },
+    search(term, context = {}) { return repo.search(term, context, ['name', 'description', 'slug']); },
+    update(id, patch, context = {}) { return repo.update(id, patch, context); },
+    delete(id, context = {}) { return repo.delete(id, context); },
+    validate(target, context = {}) {
+        const node = typeof target === 'string' ? repo.get(target, context) : { id: 'draft', createdAt: nowIso(), updatedAt: nowIso(), ...normalizeInput(target) };
+        if (!node)
+            throw new Error('Node not found');
+        const files = sourceFiles(node);
+        const errors = [];
+        const warnings = [];
+        if (!node.name?.trim())
+            errors.push('Node name is required');
+        if (!Object.keys(files).length)
+            errors.push('Node must include at least one source file');
+        const entrypoint = files['index.ts'] ? 'index.ts' : files['index.js'] ? 'index.js' : Object.keys(files)[0];
+        if (!entrypoint)
+            errors.push('Node package has no entrypoint');
+        if (entrypoint && !/export\s+default|module\.exports|exports\./.test(files[entrypoint] ?? ''))
+            warnings.push('Entrypoint does not obviously export a runnable handler');
+        return { valid: errors.length === 0, errors, warnings, entrypoint, fileCount: Object.keys(files).length };
+    },
+    async execute(id, input, context = {}) {
+        const node = repo.get(id, context);
+        if (!node)
+            throw new Error('Node not found');
+        const validation = Nodes.validate(id, context);
+        if (!validation.valid)
+            throw new Error(`Node validation failed: ${validation.errors.join('; ')}`);
+        const executionId = makeId('node_execution');
+        const fallbackPid = `node:${executionId}`;
+        const proc = processMonitoring?.start?.({ kind: 'Nodes', packageName: '@connectingmatrix/nodes', title: `Node ${node.name}`, targetId: fallbackPid, context, metadata: { nodeId: id, executionId } });
+        const processId = processIdOf(proc, fallbackPid);
+        const execution = executions.create({ id: executionId, nodeId: id, status: 'running', input, logs: ['Node execution started'], processId }, context);
+        PackageObservability.track(processId, { label: `Node ${node.name}`, status: 'running', progress: 20, kind: 'node', context: { nodeId: id, executionId } }, context);
+        processMonitoring?.appendLog?.(processId, 'info', 'Node execution started', { nodeId: id, executionId });
+        try {
+            const result = executorAdapter ? await executorAdapter(node, input, context) : { output: { ok: true, nodeId: id, input, entrypoint: validation.entrypoint }, logs: ['No node executor adapter configured; static validation execution completed'] };
+            const done = executions.update(execution.id, { status: 'success', output: result.output, logs: ['Node execution started', ...(result.logs ?? []), 'Node execution completed'] }, context);
+            processMonitoring?.complete?.(processId, { nodeId: id, executionId });
+            PackageObservability.track(processId, { label: `Node ${node.name}`, status: 'completed', progress: 100, kind: 'node', completedAt: nowIso(), context: { nodeId: id, executionId } }, context);
+            await bus.emit('node:execute', done);
+            return done;
+        }
+        catch (error) {
+            const failed = executions.update(execution.id, { status: 'error', logs: ['Node execution started', error instanceof Error ? error.message : String(error)] }, context);
+            processMonitoring?.fail?.(processId, error, { nodeId: id, executionId });
+            PackageObservability.track(processId, { label: `Node ${node.name}`, status: 'failed', progress: 100, kind: 'node', completedAt: nowIso(), context: { nodeId: id, executionId } }, context);
+            await bus.emit('node:execute', failed);
+            throw error;
+        }
+    },
+    abortExecution(executionId, reason = 'aborted by user', context = {}) { const execution = executions.get(executionId, context); if (!execution)
+        throw new Error(`Node execution not found: ${executionId}`); const aborted = executions.update(executionId, { status: 'aborted', logs: [...execution.logs, reason] }, context); processMonitoring?.abort?.(execution.processId, reason); PackageObservability.abort(execution.processId, reason, context); return aborted; },
+    executions: { list(nodeId, context = {}) { const list = executions.list(context, { limit: 500 }).items; return nodeId ? list.filter((item) => item.nodeId === nodeId) : list; } },
+    onNodeExecute(handler) { return bus.on('node:execute', handler); },
+    startDebugSession(input = {}, context = {}) { if (input.nodeId)
+        repo.get(input.nodeId, context); const session = debugSessions.create({ nodeId: input.nodeId, mode: input.mode ?? (input.nodeId ? 'debug' : 'create'), browserContext: input.clearContext ? {} : (input.browserContext ?? {}), messages: 0 }, context); const pid = `node-debug:${session.id}`; processMonitoring?.register?.({ processId: pid, kind: 'Nodes', packageName: '@connectingmatrix/nodes', name: `Node AI ${session.mode}`, targetId: session.id, metadata: { nodeId: input.nodeId } }, context); PackageObservability.track(pid, { label: `Node AI ${session.mode}`, status: 'running', progress: 1, kind: 'node', context: { nodeId: input.nodeId, sessionId: session.id } }, context); return session; },
+    async createWithAI(input, context = {}) { const session = Nodes.startDebugSession({ mode: 'create', browserContext: { nodeType: input.nodeType } }, context); return Nodes.debugWithAI({ sessionId: session.id, message: `create node: ${input.prompt}`, mode: 'create' }, context); },
+    async debugWithAI(arg1 = { message: 'debug node' }, arg2, arg3 = {}) {
+        const input = typeof arg1 === 'string' ? { sessionId: arg1, ...(arg2 && typeof arg2 === 'object' ? arg2 : { message: String(arg2 ?? 'debug node') }), message: arg2 && typeof arg2 === 'object' && 'message' in arg2 ? String(arg2.message ?? 'debug node') : String(arg2 ?? 'debug node') } : arg1;
+        const context = typeof arg1 === 'string' ? arg3 : arg2 ?? {};
+        const session = input.sessionId ? debugSessions.get(input.sessionId, context) : Nodes.startDebugSession({ nodeId: input.nodeId, mode: input.mode, browserContext: input.browserContext, clearContext: input.clearContext }, context);
+        if (!session)
+            throw new Error(`Node debug session not found: ${input.sessionId}`);
+        const node = session.nodeId ? repo.get(session.nodeId, context) : undefined;
+        const processId = `node-debug:${session.id}`;
+        processMonitoring?.heartbeat?.(processId, { status: 'ok', message: 'Node AI debug running', metadata: { nodeId: session.nodeId } });
+        await logDebug({ sessionId: session.id, nodeId: session.nodeId, role: 'user', content: input.message }, context);
+        const validation = node ? Nodes.validate(node.id, context) : undefined;
+        const agent = nodeAgent ?? defaultNodeAgent;
+        const result = await agent.run({ message: input.message, node, mode: session.mode, validation, execute: async (runInput) => { if (!node)
+                throw new Error('No node exists yet to execute'); return Nodes.execute(node.id, runInput, context); }, browserContext: session.browserContext }, context);
+        let updatedNode = node;
+        if (result.patch)
+            updatedNode = node ? Nodes.update(node.id, result.patch, context) : Nodes.create(result.patch, context);
+        let execution = result.execution;
+        if (!execution && updatedNode && result.actions.some((a) => a.includes('execute')))
+            execution = await Nodes.execute(updatedNode.id, { source: 'node-ai-post-create' }, context);
+        let nodePackage = result.nodePackage;
+        if (!nodePackage && updatedNode && /download|\.node|package/i.test(input.message))
+            nodePackage = await Nodes.exportNodePackage(updatedNode.id, context);
+        debugSessions.update(session.id, { nodeId: updatedNode?.id ?? session.nodeId, messages: session.messages + 2 }, context);
+        await logDebug({ sessionId: session.id, nodeId: updatedNode?.id ?? session.nodeId, role: 'assistant', content: result.output, metadata: { actions: result.actions } }, context);
+        processMonitoring?.complete?.(processId, { nodeId: updatedNode?.id, actions: result.actions });
+        PackageObservability.track(processId, { label: `Node AI ${session.mode}`, status: 'completed', progress: 100, kind: 'node', completedAt: nowIso(), context: { nodeId: updatedNode?.id ?? session.nodeId, actions: result.actions } }, context);
+        return { ...result, execution, nodePackage, node: updatedNode };
+    },
+    debugEvents(sessionId, context = {}) { const all = debugEvents.list(context, { limit: 1000 }).items; return sessionId ? all.filter((event) => event.sessionId === sessionId) : all; },
+    async exportNodePackage(id, context = {}) { const node = repo.get(id, context); if (!node)
+        throw new Error('Node not found'); return encodeNodePackage(node); },
+    downloadNodePackage(id, context = {}) { return Nodes.exportNodePackage(id, context); },
+    async importDraggedNode(input, context = {}) { return Nodes.importNodePackage(input, context); },
+    async importNodePackage(input, context = {}) { return Nodes.create(await decodeNodePackage(input), context); },
+    launcher: createPackageStatusPanel,
+    health() { return { name: '@connectingmatrix/nodes', status: 'ok', checkedAt: nowIso(), details: { endpoint, count: repo.list({ root: true }).total, executions: executions.list({ root: true }).total, debugSessions: debugSessions.list({ root: true }).total, executorAdapter: Boolean(executorAdapter), nodeAgent: Boolean(nodeAgent), nodePackageProvider: fileModule ? '@connectingmatrix/file' : 'local-fallback', processMonitoring: Boolean(processMonitoring), ...PackageObservability.healthDetails() } }; },
+};
+export const graphql = {
+    namespace: 'nodes',
+    typeDefs: `scalar JSON type Node { id: ID!, name: String!, description: String, status: String, createdAt: String!, updatedAt: String! } input NodeInput { name: String!, description: String } type NodeList { items: [Node!]!, total: Int! } type NodeValidation { valid: Boolean!, errors: [String!]!, warnings: [String!]!, entrypoint: String, fileCount: Int! } type NodeExecution { id: ID!, nodeId: ID!, status: String!, logs: [String!]! } type NodeDebugSession { id: ID!, nodeId: ID, mode: String!, messages: Int! } type Query { nodesHealth: String!, nodesList(limit: Int, offset: Int): NodeList!, nodesGet(id: ID!): Node, nodesSearch(term: String!): [Node!]!, nodesValidate(id: ID!): NodeValidation!, nodesExecutions(nodeId: ID): [NodeExecution!]!, nodesDebugEvents(sessionId: ID): String! } type Mutation { nodesCreate(input: NodeInput!): Node!, nodesUpdate(id: ID!, input: NodeInput!): Node!, nodesDelete(id: ID!): Boolean!, nodesExecute(id: ID!): NodeExecution!, nodesStartDebug(nodeId: ID, mode: String): NodeDebugSession!, nodesDebugWithAI(sessionId: ID, nodeId: ID, message: String!): String!, nodesImportPackage(content: String!): Node! }`,
+    resolvers: { Query: { nodesHealth: () => Nodes.health().status, nodesList: (parent, args, ctx) => Nodes.getList(args, ctx), nodesGet: (parent, args, ctx) => Nodes.getObject(args.id, ctx), nodesSearch: (parent, args, ctx) => Nodes.search(args.term, ctx), nodesValidate: (_, args, ctx) => Nodes.validate(args.id, ctx), nodesExecutions: (_, args, ctx) => Nodes.executions.list(args.nodeId, ctx), nodesDebugEvents: (_, args, ctx) => JSON.stringify(Nodes.debugEvents(args.sessionId, ctx)) }, Mutation: { nodesCreate: (parent, args, ctx) => Nodes.create(args.input, ctx), nodesUpdate: (parent, args, ctx) => Nodes.update(args.id, args.input, ctx), nodesDelete: (parent, args, ctx) => Nodes.delete(args.id, ctx), nodesExecute: (_, args, ctx) => Nodes.execute(args.id, undefined, ctx), nodesStartDebug: (_, args, ctx) => Nodes.startDebugSession(args, ctx), nodesDebugWithAI: async (_, args, ctx) => JSON.stringify(await Nodes.debugWithAI(args, ctx)), nodesImportPackage: async (_, args, ctx) => Nodes.importNodePackage(args.content, ctx) } },
+    migrations: ['migrations/0001_init.sql'],
+};
+export function createPackage() {
+    return { name: '@connectingmatrix/nodes', version: '0.3.0', health: () => Nodes.health(), graphql, migrations: graphql.migrations, launcher: createPackageStatusPanel, routes: [{ method: 'GET', path: '/nodes/health', handler: () => Nodes.health() }, { method: 'GET', path: '/nodes', handler: (request) => Nodes.getList({}, contextFromUnknown(request)) }, { method: 'POST', path: '/nodes/debug', handler: (request) => Nodes.debugWithAI(request.body ? { ...request.body, message: request.body.message ?? 'debug node' } : { message: 'debug node' }, request.context ?? {}) }, { method: 'POST', path: '/nodes/package/import', handler: (request) => Nodes.importNodePackage(request.body?.content ?? '', request.context ?? {}) }], runtime: { Nodes, observability: PackageObservability } };
+}
+export * from './contracts.js';
+export * from './package-structure.js';
+export * from './observability.js';
+export * from './services/package-status.service.js';

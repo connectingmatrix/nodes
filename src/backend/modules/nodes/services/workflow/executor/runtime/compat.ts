@@ -1,4 +1,4 @@
-import { WorkflowLogLevelEnum, WorkflowRunLogEvent } from '@connectingmatrix/workflows/services/workflow/contracts/types';
+import { WorkflowLogLevelEnum, WorkflowRunLogEvent } from '@connectingmatrix/workflow-driver/services/workflow/contracts/types';
 import type { CompatWorkflowLogger, WorkflowExecutionLoggerTarget } from '@giga/shared/types/contracts/workflow.types';
 
 export type { CompatWorkflowLogger, WorkflowExecutionLoggerTarget } from '@giga/shared/types/contracts/workflow.types';

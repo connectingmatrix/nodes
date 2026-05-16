@@ -12,9 +12,9 @@ import { Switch } from '../components/ui/switch';
 import { Textarea } from '../components/ui/textarea';
 import { useToast } from '../components/Toast';
 import { useUiDataContext } from '../contexts/AuthSessionContext';
-import { createUserNode, loadUserNode, updateUserNode, validateUserNode } from '@/dataloaders';
+import { createUserNode, loadUserNode, updateUserNode, validateUserNode } from '@giga/dataloader/client/legacy/dataloaders';
 import { chatRoute } from '../data/chatRoute';
-import type { JsonObject, UserNodeRecord, WorkflowNodeValidation, WorkflowUserNodeInput } from '@/orm';
+import type { JsonObject, UserNodeRecord, WorkflowNodeValidation, WorkflowUserNodeInput } from '@giga/dataloader/client/legacy/orm';
 
 type EditorTab = 'basic' | 'source' | 'validation';
 

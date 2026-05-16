@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { WorkflowNodeStatusEnum } from '@connectingmatrix/workflows/services/workflow/contracts/types';
+import { WorkflowNodeStatusEnum } from '@connectingmatrix/workflow-driver/services/workflow/contracts/types';
 import { WORKFLOW_NODE_HANDLERS } from '@connectingmatrix/nodes/services/workflow/nodes/runtime/node-handlers';
 import { createBackendNodeHandler } from '../../../../src/services/workflow/executor/runtime/backend-node-handler';
 

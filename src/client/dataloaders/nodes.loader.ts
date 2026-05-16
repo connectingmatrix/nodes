@@ -1,7 +1,7 @@
-import type { EntityListResult, UserNodeRecord, WorkflowNodeValidation, WorkflowUserNodeInput } from '@/orm';
-import { createWorkflowUserNodeOperation, deleteWorkflowUserNodeOperation, updateWorkflowUserNodeOperation, validateWorkflowUserNodeOperation, workflowUserNodeOperation, workflowUserNodesOperation } from '@/orm';
-import type { UiDataContext } from '@/dataloaders/context';
-import { assertCanPerform } from '@/dataloaders/permissions.loader';
+import type { EntityListResult, UserNodeRecord, WorkflowNodeValidation, WorkflowUserNodeInput } from '@giga/dataloader/client/legacy/orm';
+import { createWorkflowUserNodeOperation, deleteWorkflowUserNodeOperation, updateWorkflowUserNodeOperation, validateWorkflowUserNodeOperation, workflowUserNodeOperation, workflowUserNodesOperation } from '@giga/dataloader/client/legacy/orm';
+import type { UiDataContext } from '@giga/dataloader/client/legacy/dataloaders/context';
+import { assertCanPerform } from '@giga/dataloader/client/legacy/dataloaders/permissions.loader';
 
 const searchNodes = (rows: UserNodeRecord[], search: string): UserNodeRecord[] => {
     const query = search.trim().toLowerCase();

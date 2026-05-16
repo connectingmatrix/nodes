@@ -19,7 +19,7 @@ import { resolveChatScopeContext } from '@connectingmatrix/chat/services/chat/au
 import { executeAction } from '@connectingmatrix/chat/services/chat/runtime/action';
 import { compactActionValue } from '@connectingmatrix/chat/services/chat/runtime/action-value';
 import { TREE_ACTION_NAMES } from '@giga/tree/services/giga/tree/integration/mcp';
-import { WorkflowNodeHandler, WorkflowNodeStatusEnum, WorkflowRemoteNodeIdEnum } from '@connectingmatrix/workflows/services/workflow/contracts/types';
+import { WorkflowNodeHandler, WorkflowNodeStatusEnum, WorkflowRemoteNodeIdEnum } from '@connectingmatrix/workflow-driver/services/workflow/contracts/types';
 import { executeCurrentChatNode } from '@connectingmatrix/nodes/services/workflow/nodes/runtime/current-chat';
 import {
   executeWorkflowArtifactPublishNode,
@@ -30,7 +30,7 @@ import { executeSharedSpaceNode } from '@connectingmatrix/nodes/services/workflo
 import { executeScopedNodeManagerNode } from '@connectingmatrix/nodes/services/workflow/nodes/auth/scoped-node-manager-node';
 import { executeAgentRuntimeNode } from '@connectingmatrix/nodes/services/workflow/nodes/runtime/agent-runtime-node';
 import { WORKFLOW_GROUPED_ACTION_NODE_IDS, groupedActionAllowed } from '@connectingmatrix/nodes/services/workflow/nodes/runtime/action-node-registry';
-import type { WorkflowNodeHandlerResult } from '@connectingmatrix/workflows/services/workflow/contracts/types';
+import type { WorkflowNodeHandlerResult } from '@connectingmatrix/workflow-driver/services/workflow/contracts/types';
 import type { AgentActionName, AgentActionResult } from '@giga/shared/types/contracts/agent.types';
 
 export const START_MODEL_ID = 'start';

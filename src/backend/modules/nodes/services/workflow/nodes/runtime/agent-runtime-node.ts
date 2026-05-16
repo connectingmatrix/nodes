@@ -1,6 +1,6 @@
 import { parseRecordValue, parseStringValue } from 'giga-ai-helper/workflow';
-import { executeBackendAgentTool, executeSharedAgentRuntime, toWorkflowNodeHandlerResult } from '@connectingmatrix/workflows/services/workflow/agent';
-import { WorkflowNodeStatusEnum, type WorkflowNodeHandler } from '@connectingmatrix/workflows/services/workflow/contracts/types';
+import { executeBackendAgentTool, executeSharedAgentRuntime, toWorkflowNodeHandlerResult } from '@connectingmatrix/workflow-driver/services/workflow/agent';
+import { WorkflowNodeStatusEnum, type WorkflowNodeHandler } from '@connectingmatrix/workflow-driver/services/workflow/contracts/types';
 
 const readKnowledge = (value: unknown): string | string[] | null => {
   if (Array.isArray(value)) return value.map((entry) => parseStringValue(entry)).filter(Boolean);

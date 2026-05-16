@@ -5,14 +5,14 @@ import {
   WorkflowExecutionRequestContext,
   WorkflowNodeHandlerContext,
   WorkflowNodeHandlerResult,
-} from '@connectingmatrix/workflows/services/workflow/contracts/types';
+} from '@connectingmatrix/workflow-driver/services/workflow/contracts/types';
 // Existing workflow reference bridge imports the executor runtime; keep this dispatch edge explicit.
 // eslint-disable-next-line import/no-cycle
-import { executeWorkflowReferenceBackendRequest } from '@connectingmatrix/workflows/services/workflow/contracts/execution-reference';
+import { executeWorkflowReferenceBackendRequest } from '@connectingmatrix/workflow-driver/services/workflow/contracts/execution-reference';
 import {
   executeWorkflowManagementBackendRequest,
   getWorkflowExecutionRequestContext,
-} from '@connectingmatrix/workflows/services/workflow/runtime/credential-host-context';
+} from '@connectingmatrix/workflow-driver/services/workflow/runtime/credential-host-context';
 import { WORKFLOW_GROUPED_ACTION_NODE_IDS } from '@connectingmatrix/nodes/services/workflow/nodes/runtime/action-node-registry';
 import { WORKFLOW_NODE_HANDLERS } from '@connectingmatrix/nodes/services/workflow/nodes/runtime/node-handlers';
 import type { WorkflowBackendDescriptor, WorkflowBackendRequest } from '@giga/shared/types/contracts/workflow.types';

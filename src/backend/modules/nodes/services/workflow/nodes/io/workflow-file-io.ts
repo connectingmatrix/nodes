@@ -9,7 +9,7 @@ import { AttachmentEntity, OrganisationEntity } from '@connectingmatrix/orm/repo
 import { isCurrentUserRootUser } from '@giga/shared/lib/helper';
 import { assertFileName, assertWritable } from '@giga/general/services/shared-space/file-ops';
 import { hostPath } from '@giga/general/services/shared-space/path';
-import { WorkflowNodeStatusEnum, type WorkflowNodeHandler } from '@connectingmatrix/workflows/services/workflow/contracts/types';
+import { WorkflowNodeStatusEnum, type WorkflowNodeHandler } from '@connectingmatrix/workflow-driver/services/workflow/contracts/types';
 
 const STORAGE_BUCKET = 'storage';
 const fileChecksum = async (path: string) =>

@@ -1,6 +1,6 @@
-import { executeBackendAgentTool } from '@connectingmatrix/workflows/services/workflow/agent';
-import { WorkflowNodeStatusEnum } from '@connectingmatrix/workflows/services/workflow/contracts/types';
-import type { WorkflowNodeHandlerContext, WorkflowNodeHandlerResult } from '@connectingmatrix/workflows/services/workflow/contracts/types';
+import { executeBackendAgentTool } from '@connectingmatrix/workflow-driver/services/workflow/agent';
+import { WorkflowNodeStatusEnum } from '@connectingmatrix/workflow-driver/services/workflow/contracts/types';
+import type { WorkflowNodeHandlerContext, WorkflowNodeHandlerResult } from '@connectingmatrix/workflow-driver/services/workflow/contracts/types';
 
 const record = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};

@@ -7,9 +7,9 @@ import {
   WorkflowNodeModel,
   WorkflowStepExecutionArgs,
   WorkflowStepExecutionResult,
-} from '@connectingmatrix/workflows/services/workflow/contracts/types';
+} from '@connectingmatrix/workflow-driver/services/workflow/contracts/types';
 // eslint-disable-next-line import/no-cycle
-import { createWorkflowExecutorHostContext } from '@connectingmatrix/workflows/services/workflow/runtime/credential-host-context';
+import { createWorkflowExecutorHostContext } from '@connectingmatrix/workflow-driver/services/workflow/runtime/credential-host-context';
 import { workflowExecutor } from './runtime/runtime';
 import { createCompatWorkflowLogger, resolveExecutionLogEvents } from './runtime/compat';
 

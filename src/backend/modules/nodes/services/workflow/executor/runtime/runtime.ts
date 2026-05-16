@@ -9,8 +9,8 @@ import {
 } from '@workflow/executor';
 import { toSafeString } from 'giga-ai-helper';
 // eslint-disable-next-line import/no-cycle
-import { WorkflowExecutionRequestContext } from '@connectingmatrix/workflows/services/workflow/contracts/types';
-import { getWorkflowExecutionRequestContext } from '@connectingmatrix/workflows/services/workflow/runtime/credential-host-context';
+import { WorkflowExecutionRequestContext } from '@connectingmatrix/workflow-driver/services/workflow/contracts/types';
+import { getWorkflowExecutionRequestContext } from '@connectingmatrix/workflow-driver/services/workflow/runtime/credential-host-context';
 import { executeWorkflowBackendRequest } from '@connectingmatrix/nodes/services/workflow/executor/runtime/backend-dispatch';
 import { resolveUserNodeSourceFiles } from '@connectingmatrix/nodes/services/workflow/user-nodes';
 import { resolveBuiltInNodeSourceFiles } from '../io/built-in-node-source-files';

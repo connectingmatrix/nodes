@@ -2,7 +2,7 @@ import { buildAgentContext } from '@connectingmatrix/chat/services/chat/runtime/
 import { getLegacySessionScope, getSessionScope, resolveChatScopeContext } from '@connectingmatrix/chat/services/chat/auth/scope';
 import { ChatEntity, ChatMessageEntity, MessageChunkEntity, SubjectTagEntity, TagEntity } from '@connectingmatrix/orm/repositories/entities';
 import { Subject } from '@connectingmatrix/orm/repositories/entities/tree/Subject';
-import { WorkflowNodeHandler, WorkflowNodeStatusEnum } from '@connectingmatrix/workflows/services/workflow/contracts/types';
+import { WorkflowNodeHandler, WorkflowNodeStatusEnum } from '@connectingmatrix/workflow-driver/services/workflow/contracts/types';
 
 const record = (value: unknown): Record<string, any> =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, any>) : {};

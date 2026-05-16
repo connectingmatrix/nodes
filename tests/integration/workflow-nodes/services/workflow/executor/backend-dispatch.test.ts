@@ -4,7 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { getActionCatalog } from '@connectingmatrix/chat/services/chat/runtime/action';
 import { GIGA_ACTION_NAMES } from '@connectingmatrix/chat/services/chat/actions/telemetry/catalog';
-import { WorkflowAuthModeEnum, WorkflowNodeStatusEnum } from '@connectingmatrix/workflows/services/workflow/contracts/types';
+import { WorkflowAuthModeEnum, WorkflowNodeStatusEnum } from '@connectingmatrix/workflow-driver/services/workflow/contracts/types';
 import { WORKFLOW_NODE_HANDLERS } from '@connectingmatrix/nodes/services/workflow/nodes/runtime/node-handlers';
 import { WORKFLOW_GROUPED_ACTION_NODE_ACTIONS } from '@connectingmatrix/nodes/services/workflow/nodes/runtime/action-node-registry';
 import {

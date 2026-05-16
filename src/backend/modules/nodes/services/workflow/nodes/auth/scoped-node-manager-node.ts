@@ -2,7 +2,7 @@ import { BadRequestError } from 'routing-controllers';
 import { parseRecordValue, parseStringValue } from 'giga-ai-helper/workflow';
 import { SupabaseClientAdmin } from '@giga/general/decorators/integration/supabase-admin-client';
 import { isCurrentUserRootUser } from '@giga/shared/lib/helper';
-import { WorkflowNodeHandler, WorkflowNodeStatusEnum } from '@connectingmatrix/workflows/services/workflow/contracts/types';
+import { WorkflowNodeHandler, WorkflowNodeStatusEnum } from '@connectingmatrix/workflow-driver/services/workflow/contracts/types';
 import { createUserWorkflowNode, updateUserWorkflowNode } from '@connectingmatrix/nodes/services/workflow/user-nodes/write/mutations';
 import {
   deleteUserWorkflowNode,
